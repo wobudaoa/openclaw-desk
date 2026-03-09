@@ -1,0 +1,10 @@
+.history/
+src/__pycache__/
+markdown/
+__pycache__/
+*.py[cod]
+.env*
+.venv/
+venv/
+.idea/
+.vscode/

@@ -1,0 +1,3 @@
+PySide6>=6.4.0
+PyQt6-WebEngine>=6.4.0
+psutil>=5.9.0
