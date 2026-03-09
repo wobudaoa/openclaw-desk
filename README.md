@@ -1,5 +1,7 @@
 # 🦞 OpenClaw Desk
 
+[简体中文](README.zh-CN.md)
+
 🦞 A lightweight desktop controller for the OpenClaw Gateway, with an embedded dashboard view, and a simple local control panel.
 
 ------
@@ -10,13 +12,13 @@
 - 📊 View gateway status in real time
 - 🌐 Open the OpenClaw Dashboard directly inside the desktop app
 - 🖥️ Use the system tray for quick access and background operation
-- 🦞 Interactive welcome page with a movable lobster mascot
+- 🦞 Interactive welcome page with a lobster mascot that can be moved to a specified position
 
 ------
 
 ## ⚡ Quickstart
 
-## Preview
+### Preview
 
 Current desktop UI preview:
 
@@ -33,7 +35,7 @@ Current desktop UI preview:
 pip install -r requirements.txt
 ```
 
-1. Start the app:
+3. Start the app:
 
 ```bash
 python main.py
