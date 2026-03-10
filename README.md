@@ -1,22 +1,22 @@
-# OpenClaw Desk
+# 🦞 OpenClaw Desk
 
 [简体中文](README.zh-CN.md)
 
-A lightweight desktop controller for the OpenClaw Gateway, with an embedded dashboard view and a simple local control panel.
+🦞 A lightweight desktop controller for the OpenClaw Gateway, with an embedded dashboard view and a simple local control panel.
 
 ------
 
-## Features
+## ✨ Features
 
-- Start, stop, and restart the local OpenClaw Gateway
-- View gateway status in real time
-- Open the OpenClaw Dashboard directly inside the desktop app
-- Optionally keep OpenClaw running in the background after closing the window
-- Interactive Welcome Page where the pet lobster can be moved to a target position
+- 🚀 Start, stop, and restart the local OpenClaw Gateway
+- 📊 View gateway status in real time
+- 🌐 Open the OpenClaw Dashboard directly inside the desktop app
+- 🖥️ Optionally keep OpenClaw running in the background after closing the window
+- 🦞 Interactive Welcome Page where the pet lobster can be moved to a target position
 
 ------
 
-## Quickstart
+## ⚡ Quickstart
 
 ### Preview
 
@@ -26,7 +26,7 @@ Current desktop UI preview:
 
 ------
 
-### Direct Installation
+### 💥 Direct Installation
 
 If you only want to use **ClawDesk** quickly, without configuring a Python environment or building manually, you can download the official Windows installer directly.
 
@@ -113,7 +113,7 @@ pause
 
 ------
 
-## Requirements
+## 🧩 Requirements
 
 - Python **>=3.10, <=3.12**
 - Running on a Windows desktop environment is recommended
@@ -124,14 +124,14 @@ If OpenClaw is not installed yet, the app will remain in a locked error state an
 
 ------
 
-## Install OpenClaw
+## 🔧 Install OpenClaw
 
 - GitHub: https://github.com/openclaw/openclaw
 - Docs: https://docs.openclaw.ai/
 
 ------
 
-## Project Structure
+## 📂 Project Structure
 
 ```text
 .
@@ -160,7 +160,7 @@ If OpenClaw is not installed yet, the app will remain in a locked error state an
 
 ------
 
-## Notes
+## 📝 Notes
 
 - This desktop app manages a local **OpenClaw Gateway** process running on port **18789** by default.
 - The embedded browser depends on **Qt WebEngine** support in the current environment.
@@ -168,7 +168,7 @@ If OpenClaw is not installed yet, the app will remain in a locked error state an
 
 ------
 
-## License
+## 📜 License
 
 MIT License © 2026 wobudaoa
 
