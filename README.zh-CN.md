@@ -11,7 +11,7 @@
 - 🚀 启动、停止和重启本地 OpenClaw Gateway
 - 📊 实时查看网关状态
 - 🌐 直接在桌面应用内打开 OpenClaw Dashboard
-- 🖥️ 通过系统托盘进行快速访问和后台运行
+- 🖥️ 支持关闭程序后，后台持续运行OpenClaw（可选）
 - 🦞 交互式 Welcome Page 欢迎页，可将宠物小龙虾移动到指定位置
 
 ------
@@ -23,6 +23,29 @@
 当前桌面界面预览：
 
 ![OpenClaw Desk Screenshot](assets/Screenshot.png)
+
+------
+
+### 直接安装
+
+如果你只想快速使用 **ClawDesk**，无需配置 Python 环境或手动构建，可以直接下载官方提供的 Windows 安装包。
+
+1. 打开项目的 **Releases 页面**
+    https://github.com/wobudaoa/openclaw-desk/releases
+
+2. 在最新版本中下载安装程序：
+
+   **ClawDesk-Setup-1.0.0.exe**
+
+3. 双击运行安装程序，按照提示完成安装。
+
+安装完成后，你可以通过以下方式启动 **ClawDesk**：
+
+- 开始菜单 → **ClawDesk**
+- 桌面快捷方式（如果安装时选择创建）
+- 安装目录中的 `ClawDesk.exe`
+
+启动后即可通过桌面界面管理 **OpenClaw Gateway**，并在应用内直接打开控制面板。
 
 ------
 

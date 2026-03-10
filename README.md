@@ -1,22 +1,22 @@
-# 🦞 OpenClaw Desk
+# OpenClaw Desk
 
 [简体中文](README.zh-CN.md)
 
-🦞 A lightweight desktop controller for the OpenClaw Gateway, with an embedded dashboard view and a simple local control panel.
+A lightweight desktop controller for the OpenClaw Gateway, with an embedded dashboard view and a simple local control panel.
 
 ------
 
-## ✨ Features
+## Features
 
-- 🚀 Start, stop, and restart the local OpenClaw Gateway
-- 📊 View gateway status in real time
-- 🌐 Open the OpenClaw Dashboard directly inside the desktop app
-- 🖥️ Use the system tray for quick access and background operation
-- 🦞 Interactive welcome page where the pet lobster can be moved to a specified position
+- Start, stop, and restart the local OpenClaw Gateway
+- View gateway status in real time
+- Open the OpenClaw Dashboard directly inside the desktop app
+- Optionally keep OpenClaw running in the background after closing the window
+- Interactive Welcome Page where the pet lobster can be moved to a target position
 
 ------
 
-## ⚡ Quickstart
+## Quickstart
 
 ### Preview
 
@@ -26,9 +26,32 @@ Current desktop UI preview:
 
 ------
 
-### Run from source
+### Direct Installation
+
+If you only want to use **ClawDesk** quickly, without configuring a Python environment or building manually, you can download the official Windows installer directly.
+
+1. Open the project's **Releases** page:
+   https://github.com/wobudaoa/openclaw-desk/releases
+
+2. Download the installer from the latest release:
+   **ClawDesk-Setup-1.0.0.exe**
+
+3. Run the installer and follow the setup steps.
+
+After installation, you can launch **ClawDesk** from:
+
+- The Start Menu: **ClawDesk**
+- The desktop shortcut, if you chose to create one during setup
+- `ClawDesk.exe` in the installation directory
+
+Once started, you can manage the **OpenClaw Gateway** from the desktop UI and open the dashboard directly inside the app.
+
+------
+
+### Run from Source
 
 1. Create and activate a Python virtual environment. Conda is recommended, with Python **3.10 - 3.12**.
+
 2. Install dependencies from the project root:
 
 ```bash
@@ -41,70 +64,106 @@ pip install -r requirements.txt
 python main.py
 ```
 
-4. If you use Conda, you can also edit `openclaw-desk.bat`, replace the `openclaw` environment name with your own, and launch the app by double-clicking the script.
+4. If you use Conda, you can also edit `openclaw-desk.bat`, replace the environment name `openclaw` with your own, then launch it by double-clicking the script. The batch file looks like this:
+
+```batch
+@echo off
+chcp 65001 >nul
+title OpenClaw Launcher
+echo ========================================
+echo      OpenClaw Auto Launcher
+echo ========================================
+echo.
+
+:: Activate the Conda environment. It is called openclaw here.
+call conda activate openclaw
+
+:: Check whether activation succeeded
+if %errorlevel% neq 0 (
+    echo [ERROR] Failed to activate environment. Please check:
+    echo     1. Whether Conda is installed correctly
+    echo     2. Whether the openclaw environment exists
+    echo     3. Run: conda info --envs
+    pause
+    exit /b 1
+)
+
+echo [OK] Conda environment activated: openclaw
+echo.
+
+:: Run the Python app
+echo [START] Launching OpenClaw Desk...
+python main.py
+
+:: Pause after the app exits
+echo.
+echo [EXIT] Program closed.
+pause
+```
 
 ------
 
-## 🧩 Requirements
+## Requirements
 
 - Python **>=3.10, <=3.12**
-- Windows desktop environment recommended
-- **OpenClaw** installed locally and available to the system
-- **Qt WebEngine** available if you want to use the embedded dashboard view
+- Running on a Windows desktop environment is recommended
+- **OpenClaw** must already be installed locally and available in the system path
+- **Qt WebEngine** is required if you want to use the embedded dashboard view
 
-If OpenClaw is not installed, the app will stay in a locked error state and prompt you to install it first.
+If OpenClaw is not installed yet, the app will remain in a locked error state and prompt you to install it first.
 
 ------
 
-## 🔧 Install OpenClaw
+## Install OpenClaw
 
 - GitHub: https://github.com/openclaw/openclaw
 - Docs: https://docs.openclaw.ai/
 
 ------
 
-## 📂 Project Structure
+## Project Structure
 
-```
+```text
 .
-├── main.py
-├── openclaw-desk.bat
-├── requirements.txt
-├── assets/
-│   └── emoji.png
-├── src/
-│   ├── browser_view.py
-│   ├── gateway_manager.py
-│   ├── main_window.py
-│   └── tray_icon.py
-├── utils/
-│   └── emoji_icon.py
-└── README.md
+|-- main.py
+|-- openclaw-desk.bat
+|-- requirements.txt
+|-- assets/
+|   |-- emoji.png
+|-- src/
+|   |-- browser_view.py
+|   |-- gateway_manager.py
+|   |-- main_window.py
+|   |-- tray_icon.py
+|-- utils/
+|   |-- emoji_icon.py
+|-- README.md
+`-- README.zh-CN.md
 ```
 
-**File description**
+**File Description**
 
 - `assets/emoji.png`
-  App icon asset used by the desktop application.
+  Icon asset used by the desktop application.
 - `utils/emoji_icon.py`
   Utility script for generating a custom icon from an emoji.
 
 ------
 
-## 📝 Notes
+## Notes
 
-- The desktop app manages a local **OpenClaw Gateway** process on port **18789** by default.
-- The embedded browser depends on **Qt WebEngine** support in your environment.
+- This desktop app manages a local **OpenClaw Gateway** process running on port **18789** by default.
+- The embedded browser depends on **Qt WebEngine** support in the current environment.
 - If WebEngine is unavailable, the app can still expose the dashboard URL through the fallback UI.
 
 ------
 
-## 📜 License
+## License
 
 MIT License © 2026 wobudaoa
 
 OpenClaw Desk is released under the MIT License.
 
-This project is an independent desktop wrapper for OpenClaw and is **not affiliated with or endorsed by the OpenClaw project**.
+This project is an independent desktop wrapper for OpenClaw. It is **not affiliated with or endorsed by the OpenClaw project**.
 
 See the `LICENSE` file for the full license text.
