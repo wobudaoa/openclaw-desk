@@ -103,6 +103,16 @@ pause
 
 ------
 
+## 🫡 Usage Instructions
+
+- If installed via the installation package, simply press Win+Q and search for ClawDesk!
+- When closing, you will be prompted with the following three options:
+    - Yes = Stop gateway and exit
+    - No = Keep gateway running and exit
+    - Cancel = Stay in application
+
+------
+
 ## Requirements
 
 - Python **>=3.10, <=3.12**
