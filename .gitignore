@@ -1,6 +1,8 @@
 .history/
+build/
+dist/
+installer-dist/
 src/__pycache__/
-markdown/
 __pycache__/
 *.py[cod]
 .env*

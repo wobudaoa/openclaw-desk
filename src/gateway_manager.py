@@ -9,22 +9,16 @@ import time
 import json
 import os
 import shutil
-from pathlib import Path
 from enum import Enum
 from typing import Optional
 from PySide6.QtCore import QObject, Signal, QThread
 
+from src.config_utils import iter_openclaw_config_paths
+
 
 def load_gateway_token() -> Optional[str]:
     """Load gateway token from openclaw.json config"""
-    config_paths = [
-        os.path.expanduser("~/.openclaw/openclaw.json"),
-        os.path.expanduser("~/.openclaw.json"),
-        Path.home() / ".openclaw" / "openclaw.json",
-        Path(os.getenv('HOME')) / ".openclaw" / "openclaw.json"
-    ]
-    
-    for config_path in config_paths:
+    for config_path in iter_openclaw_config_paths():
         if os.path.exists(config_path):
             try:
                 with open(config_path, 'r', encoding='utf-8') as f:

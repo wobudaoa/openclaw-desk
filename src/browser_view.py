@@ -5,7 +5,6 @@ Embedded Browser View for OpenClaw Web UI
 import json
 import logging
 import os
-from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal, QSize, QTimer
 from PySide6.QtGui import QFont
@@ -20,6 +19,8 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QStackedLayout,
 )
+
+from src.config_utils import iter_openclaw_config_paths
 
 logger = logging.getLogger("openclaw.desktop.browser")
 
@@ -43,17 +44,7 @@ except ImportError:
 
 def load_gateway_token() -> str:
     """Load gateway token from openclaw.json config."""
-    home_env = os.getenv("HOME")
-    config_paths = [
-        os.path.expanduser("~/.openclaw/openclaw.json"),
-        os.path.expanduser("~/.openclaw.json"),
-        Path.home() / ".openclaw" / "openclaw.json",
-    ]
-
-    if home_env:
-        config_paths.append(Path(home_env) / ".openclaw" / "openclaw.json")
-
-    for config_path in config_paths:
+    for config_path in iter_openclaw_config_paths():
         if os.path.exists(config_path):
             try:
                 with open(config_path, "r", encoding="utf-8") as f:
@@ -127,7 +118,7 @@ class BrowserView(QWidget):
         token = load_gateway_token().strip()
         self.url = self.base_url                     # current URL being loaded
         if token:
-            self.url += f"?token={token}"
+            self.url += f"?token={token}#token={token}"
 
         self._setup_ui()
 
