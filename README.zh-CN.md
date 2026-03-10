@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-🦞 一个面向 OpenClaw Gateway 的轻量级桌面控制器，内置仪表盘视图，并提供简洁的本地控制面板。
+🦞 一个面向 OpenClaw Gateway 的轻量级桌面控制器，内置仪表盘视图，并提供简洁直观的本地控制面板。
 
 ------
 
@@ -12,7 +12,7 @@
 - 📊 实时查看网关状态
 - 🌐 直接在桌面应用内打开 OpenClaw Dashboard
 - 🖥️ 通过系统托盘进行快速访问和后台运行
-- 🦞 交互式 Welcome Page 欢迎页，支持将小龙虾吉祥物移动到指定位置
+- 🦞 交互式 Welcome Page 欢迎页，可将宠物小龙虾移动到指定位置
 
 ------
 
@@ -28,8 +28,8 @@
 
 ### 从源码运行
 
-1. 创建虚拟环境，或激活已有虚拟环境。
-2. 安装依赖：
+1. 创建并激活一个 Python 虚拟环境，推荐使用 Conda，Python 版本建议为 **3.10 - 3.12**。
+2. 在项目根目录安装依赖：
 
 ```bash
 pip install -r requirements.txt
@@ -41,7 +41,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-4. 可以复制以下内容到文本文档，放到根目录，保存为openclaw-desk.cmd，双击直接运行即可。
+4. 如果你使用 Conda，也可以直接修改根目录中的 `openclaw-desk.bat`，将其中的环境名 `openclaw` 改成你自己的环境名，然后双击运行。下面是详细的批处理脚本内容：
 
 ```batch
 @echo off
@@ -83,12 +83,12 @@ pause
 
 ## 🧩 环境要求
 
-- Python **3.10+**
+- Python **>=3.10, <=3.12**
 - 推荐在 Windows 桌面环境中运行
 - 需要已在本地安装 **OpenClaw**，并能被系统识别
 - 如果你要使用内嵌仪表盘视图，需要具备 **Qt WebEngine**
 
-如果未安装 OpenClaw，应用会保持锁定的错误状态，并提示先完成安装。
+如果尚未安装 OpenClaw，应用会停留在锁定的错误状态，并提示你先完成安装。
 
 ------
 
@@ -104,6 +104,7 @@ pause
 ```text
 .
 ├── main.py
+├── openclaw-desk.bat
 ├── requirements.txt
 ├── assets/
 │   └── emoji.png
@@ -131,7 +132,7 @@ pause
 
 - 这个桌面应用默认管理运行在 **18789** 端口上的本地 **OpenClaw Gateway** 进程。
 - 内嵌浏览器依赖你当前环境中的 **Qt WebEngine** 支持。
-- 如果 WebEngine 不可用，项目仍可通过降级 UI 暴露仪表盘 URL。
+- 如果 WebEngine 不可用，应用仍可通过降级界面暴露仪表盘 URL。
 
 ------
 

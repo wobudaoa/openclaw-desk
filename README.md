@@ -2,7 +2,7 @@
 
 [简体中文](README.zh-CN.md)
 
-🦞 A lightweight desktop controller for the OpenClaw Gateway, with an embedded dashboard view, and a simple local control panel.
+🦞 A lightweight desktop controller for the OpenClaw Gateway, with an embedded dashboard view and a simple local control panel.
 
 ------
 
@@ -12,7 +12,7 @@
 - 📊 View gateway status in real time
 - 🌐 Open the OpenClaw Dashboard directly inside the desktop app
 - 🖥️ Use the system tray for quick access and background operation
-- 🦞 Interactive welcome page with a lobster mascot that can be moved to a specified position
+- 🦞 Interactive welcome page where the pet lobster can be moved to a specified position
 
 ------
 
@@ -28,8 +28,8 @@ Current desktop UI preview:
 
 ### Run from source
 
-1. Create a virtual environment, or activate an existing one.
-2. Install dependencies:
+1. Create and activate a Python virtual environment. Conda is recommended, with Python **3.10 - 3.12**.
+2. Install dependencies from the project root:
 
 ```bash
 pip install -r requirements.txt
@@ -41,11 +41,13 @@ pip install -r requirements.txt
 python main.py
 ```
 
+4. If you use Conda, you can also edit `openclaw-desk.bat`, replace the `openclaw` environment name with your own, and launch the app by double-clicking the script.
+
 ------
 
 ## 🧩 Requirements
 
-- Python **3.10+**
+- Python **>=3.10, <=3.12**
 - Windows desktop environment recommended
 - **OpenClaw** installed locally and available to the system
 - **Qt WebEngine** available if you want to use the embedded dashboard view
@@ -66,6 +68,7 @@ If OpenClaw is not installed, the app will stay in a locked error state and prom
 ```
 .
 ├── main.py
+├── openclaw-desk.bat
 ├── requirements.txt
 ├── assets/
 │   └── emoji.png
@@ -92,7 +95,7 @@ If OpenClaw is not installed, the app will stay in a locked error state and prom
 
 - The desktop app manages a local **OpenClaw Gateway** process on port **18789** by default.
 - The embedded browser depends on **Qt WebEngine** support in your environment.
-- If WebEngine is unavailable, the project can still expose the dashboard URL through the fallback UI.
+- If WebEngine is unavailable, the app can still expose the dashboard URL through the fallback UI.
 
 ------
 
