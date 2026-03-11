@@ -36,7 +36,7 @@
 
     https://github.com/wobudaoa/openclaw-desk/releases/download/v1.0.0/ClawDesk-Setup-1.0.0.exe
    
-3. 双击运行安装程序，按照提示完成安装。
+2. 双击运行安装程序，按照提示完成安装。
 
 安装完成后，你可以通过以下方式启动 **ClawDesk**：
 
