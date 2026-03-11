@@ -30,13 +30,12 @@
 
 如果你只想快速使用 **ClawDesk**，无需配置 Python 环境或手动构建，可以直接下载官方提供的 Windows 安装包。
 
-1. 打开项目的 **Releases 页面**
-    https://github.com/wobudaoa/openclaw-desk/releases
+1. 直接点击连接下载本安装程序：
 
-2. 在最新版本中下载安装程序：
+    **ClawDesk-Setup-1.0.0.exe**
 
-   **ClawDesk-Setup-1.0.0.exe**
-
+    https://github.com/wobudaoa/openclaw-desk/releases/download/v1.0.0/ClawDesk-Setup-1.0.0.exe
+   
 3. 双击运行安装程序，按照提示完成安装。
 
 安装完成后，你可以通过以下方式启动 **ClawDesk**：
