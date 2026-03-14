@@ -1,8 +1,14 @@
 # 🦞 OpenClaw Desk
 
-[简体中文](README.zh-CN.md)
+<div align="center">
+
+**[简体中文](README.zh-CN.md) | English**
 
 🦞 A lightweight desktop controller for the OpenClaw Gateway, with an embedded dashboard view and a simple local control panel.
+
+[![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
+
+</div>
 
 ------
 
@@ -21,6 +27,8 @@
 ### Preview
 
 Current desktop UI preview:
+
+![OpenClaw Desk Screenshot](assets/Screenshot-running.png)
 
 ![OpenClaw Desk Screenshot](assets/Screenshot.png)
 

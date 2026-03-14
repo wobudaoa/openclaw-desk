@@ -1,8 +1,14 @@
 # 🦞 OpenClaw Desk
 
-[English](README.md)
+<div align="center">
+
+**简体中文 | [English](README.md)**
 
 🦞 一个面向 OpenClaw Gateway 的轻量级桌面控制器，内置仪表盘视图，并提供简洁直观的本地控制面板。
+
+[![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
+
+</div>
 
 ------
 
@@ -21,6 +27,8 @@
 ### 预览
 
 当前桌面界面预览：
+
+![OpenClaw Desk Screenshot](assets/Screenshot-running.png)
 
 ![OpenClaw Desk Screenshot](assets/Screenshot.png)
 
