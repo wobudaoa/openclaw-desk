@@ -1,6 +1,6 @@
-# 🦞 OpenClaw Desk
-
 <div align="center">
+
+# 🦞 OpenClaw Desk
 
 **[简体中文](README.zh-CN.md) | English**
 
