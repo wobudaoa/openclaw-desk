@@ -183,6 +183,8 @@ MIT License © 2026 wobudaoa
 
 OpenClaw Desk 基于 MIT License 发布。
 
+本项目是 OpenClaw 的独立桌面封装，**与 OpenClaw 项目不存在隶属关系，也未获得其背书**。
+
 ## ⭐ 星标曲线
 
 <div align="center">
@@ -190,7 +192,5 @@ OpenClaw Desk 基于 MIT License 发布。
 [![Star History Chart](https://api.star-history.com/image?repos=wobudaoa/openclaw-desk&type=date&legend=top-left)](https://www.star-history.com/?repos=wobudaoa%2Fopenclaw-desk&type=date&legend=top-left)
 
 </div>
-
-本项目是 OpenClaw 的独立桌面封装，**与 OpenClaw 项目不存在隶属关系，也未获得其背书**。
 
 完整许可证文本见 `LICENSE` 文件。
