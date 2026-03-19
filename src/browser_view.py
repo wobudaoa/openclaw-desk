@@ -6,9 +6,10 @@ import json
 import logging
 import os
 
-from PySide6.QtCore import Qt, Signal, QSize, QTimer
+from PySide6.QtCore import Qt, Signal, QSize, QTimer, QObject, QEvent, QRect
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
+    QApplication,
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
@@ -31,15 +32,9 @@ try:
     WEBENGINE_AVAILABLE = True
     WEBENGINE_BACKEND = "pyside6"
 except ImportError:
-    try:
-        from PyQt6.QtWebEngineWidgets import QWebEngineView
-        from PyQt6.QtCore import QUrl
-        WEBENGINE_AVAILABLE = True
-        WEBENGINE_BACKEND = "pyqt6"
-    except ImportError:
-        WEBENGINE_AVAILABLE = False
-        WEBENGINE_BACKEND = None
-        from PySide6.QtCore import QUrl
+    WEBENGINE_AVAILABLE = False
+    WEBENGINE_BACKEND = None
+    from PySide6.QtCore import QUrl
 
 
 def load_gateway_token() -> str:
@@ -107,6 +102,170 @@ class LoggedWebEngineView(QWebEngineView):
         super().hideEvent(event)
 
 
+class PopupGeometryGuard(QObject):
+    """Clamp suspicious top-level popup growth near the embedded WebEngine view."""
+
+    _WIDTH_GROWTH_THRESHOLD = 40
+    _HEIGHT_GROWTH_THRESHOLD = 40
+    _BASELINE_CAPTURE_MS = 120
+
+    def __init__(self, browser_view: "BrowserView"):
+        super().__init__(browser_view)
+        self.browser_view = browser_view
+        self._tracked: dict[int, dict[str, object]] = {}
+        self._correcting: set[int] = set()
+        self._pending: set[int] = set()
+        app = QApplication.instance()
+        if app is not None:
+            app.installEventFilter(self)
+
+    def eventFilter(self, watched, event):
+        if event.type() not in (
+            QEvent.Type.Show,
+            QEvent.Type.Resize,
+            QEvent.Type.Move,
+            QEvent.Type.LayoutRequest,
+            QEvent.Type.Hide,
+        ):
+            return False
+        if not isinstance(watched, QWidget):
+            return False
+
+        popup_id = id(watched)
+        if event.type() == QEvent.Type.Hide:
+            self._tracked.pop(popup_id, None)
+            self._correcting.discard(popup_id)
+            self._pending.discard(popup_id)
+            return False
+
+        if popup_id in self._correcting:
+            return False
+        if not self._is_candidate_popup(watched):
+            return False
+
+        if event.type() == QEvent.Type.Show:
+            rect = watched.frameGeometry()
+            if rect.isValid():
+                self._tracked[popup_id] = {
+                    "baseline": QRect(rect),
+                    "capture_active": True,
+                }
+                QTimer.singleShot(
+                    self._BASELINE_CAPTURE_MS,
+                    lambda widget_id=popup_id: self._finish_baseline_capture(widget_id),
+                )
+
+        if popup_id in self._pending:
+            return False
+
+        self._pending.add(popup_id)
+        QTimer.singleShot(0, lambda widget=watched, widget_id=popup_id: self._inspect_popup(widget, widget_id))
+        return False
+
+    def _is_candidate_popup(self, widget: QWidget) -> bool:
+        if not self.browser_view.isVisible():
+            return False
+        if widget is self.browser_view or widget is self.browser_view.window():
+            return False
+        if self.browser_view.isAncestorOf(widget):
+            return False
+        if not widget.isWindow():
+            return False
+
+        flags = widget.windowFlags()
+        if not (
+            bool(flags & Qt.WindowType.Popup)
+            or bool(flags & Qt.WindowType.ToolTip)
+            or bool(flags & Qt.WindowType.Tool)
+        ):
+            return False
+
+        browser_window = self.browser_view.window()
+        if browser_window is None or not browser_window.isVisible():
+            return False
+
+        browser_rect = self._global_rect(self.browser_view)
+        widget_rect = widget.frameGeometry()
+        if not browser_rect.isValid() or not widget_rect.isValid():
+            return False
+
+        return browser_rect.adjusted(-160, -160, 160, 160).intersects(widget_rect)
+
+    def _inspect_popup(self, widget: QWidget, popup_id: int):
+        self._pending.discard(popup_id)
+        if popup_id in self._correcting:
+            return
+        if not self._is_candidate_popup(widget):
+            return
+
+        rect = widget.frameGeometry()
+        if not rect.isValid() or not widget.isVisible():
+            return
+
+        tracked = self._tracked.get(popup_id)
+        if tracked is None:
+            self._tracked[popup_id] = {
+                "baseline": QRect(rect),
+                "capture_active": True,
+            }
+            QTimer.singleShot(
+                self._BASELINE_CAPTURE_MS,
+                lambda widget_id=popup_id: self._finish_baseline_capture(widget_id),
+            )
+            logger.info(
+                "tracking popup geometry: class=%s flags=%s rect=%s",
+                type(widget).__name__,
+                int(widget.windowFlags()),
+                rect.getRect(),
+            )
+            return
+
+        baseline = tracked["baseline"]
+        if rect.width() <= baseline.width() and rect.height() <= baseline.height():
+            tracked["baseline"] = QRect(rect)
+            return
+
+        if tracked.get("capture_active", False):
+            return
+
+        width_growth = rect.width() - baseline.width()
+        height_growth = rect.height() - baseline.height()
+        grows_right = rect.x() == baseline.x() and width_growth > self._WIDTH_GROWTH_THRESHOLD
+        grows_down = rect.y() == baseline.y() and height_growth > self._HEIGHT_GROWTH_THRESHOLD
+        if not (grows_right or grows_down):
+            return
+
+        corrected = QRect(rect)
+        if grows_right:
+            corrected.setX(baseline.x())
+            corrected.setWidth(baseline.width())
+        if grows_down:
+            corrected.setY(baseline.y())
+            corrected.setHeight(baseline.height())
+
+        self._correcting.add(popup_id)
+        try:
+            widget.setGeometry(corrected)
+        finally:
+            self._correcting.discard(popup_id)
+
+        logger.warning(
+            "corrected popup geometry growth: class=%s from=%s to=%s",
+            type(widget).__name__,
+            rect.getRect(),
+            corrected.getRect(),
+        )
+
+    def _finish_baseline_capture(self, popup_id: int):
+        tracked = self._tracked.get(popup_id)
+        if tracked is not None:
+            tracked["capture_active"] = False
+
+    def _global_rect(self, widget: QWidget) -> QRect:
+        top_left = widget.mapToGlobal(widget.rect().topLeft())
+        return QRect(top_left, widget.rect().size())
+
+
 class BrowserView(QWidget):
     page_load_started = Signal()
     page_load_finished = Signal(bool)
@@ -120,6 +279,7 @@ class BrowserView(QWidget):
         if token:
             self.url += f"?token={token}#token={token}"
 
+        self._popup_guard = PopupGeometryGuard(self)
         self._setup_ui()
 
     def _setup_ui(self):
