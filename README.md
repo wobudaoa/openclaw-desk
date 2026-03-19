@@ -182,4 +182,12 @@ OpenClaw Desk is released under the MIT License.
 
 This project is an independent desktop wrapper for OpenClaw. It is **not affiliated with or endorsed by the OpenClaw project**.
 
+## ⭐ Star History
+
+<div align="center">
+
+[![Star History Chart](https://api.star-history.com/image?repos=wobudaoa/openclaw-desk&type=date&legend=top-left)](https://www.star-history.com/?repos=wobudaoa%2Fopenclaw-desk&type=date&legend=top-left)
+
+</div>
+
 See the `LICENSE` file for the full license text.
