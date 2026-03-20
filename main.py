@@ -6,6 +6,7 @@ Main entry point
 import sys
 import os
 import logging
+from logging.handlers import RotatingFileHandler
 from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QIcon
@@ -14,10 +15,36 @@ from src.main_window import MainWindow, show_exit_dialog
 from src.tray_icon import TrayIcon
 from src.gateway_manager import GatewayManager, GatewayStatus
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
-)
+
+def configure_logging():
+    base_dir = (
+        os.path.dirname(sys.executable)
+        if getattr(sys, "frozen", False)
+        else os.path.dirname(os.path.abspath(__file__))
+    )
+    log_dir = os.path.join(base_dir, "log")
+    os.makedirs(log_dir, exist_ok=True)
+    log_path = os.path.join(log_dir, "openclaw-desk.log")
+
+    formatter = logging.Formatter("%(asctime)s %(levelname)s [%(name)s] %(message)s")
+    file_handler = RotatingFileHandler(
+        log_path,
+        maxBytes=512 * 1024,
+        backupCount=3,
+        encoding="utf-8",
+    )
+    file_handler.setFormatter(formatter)
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+
+    logging.basicConfig(
+        level=logging.INFO,
+        handlers=[file_handler, stream_handler],
+    )
+
+
+configure_logging()
 logger = logging.getLogger("openclaw.desktop.app")
 
 

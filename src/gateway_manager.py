@@ -1,37 +1,20 @@
-"""
-OpenClaw Gateway Manager
-Handles starting, stopping, and monitoring the OpenClaw gateway process.
-"""
+"""Start, stop, and monitor the local OpenClaw gateway process."""
 
-import subprocess
-import psutil
-import time
-import json
+import logging
+import locale
 import os
 import shutil
+import subprocess
+import threading
+import time
+from collections import deque
 from enum import Enum
 from typing import Optional
-from PySide6.QtCore import QObject, Signal, QThread
 
-from src.config_utils import iter_openclaw_config_paths
+import psutil
+from PySide6.QtCore import QObject, QThread, Signal
 
-
-def load_gateway_token() -> Optional[str]:
-    """Load gateway token from openclaw.json config"""
-    for config_path in iter_openclaw_config_paths():
-        if os.path.exists(config_path):
-            try:
-                with open(config_path, 'r', encoding='utf-8') as f:
-                    config = json.load(f)
-                    gateway_config = config.get('gateway', {})
-                    auth_config = gateway_config.get('auth', {})
-                    if auth_config.get('mode') == 'token':
-                        return auth_config.get('token')
-            except Exception:
-                pass
-    
-    # Fallback to environment variable
-    return os.environ.get('OPENCLAW_GATEWAY_TOKEN')
+logger = logging.getLogger("openclaw.desktop.gateway_manager")
 
 
 class GatewayStatus(Enum):
@@ -44,14 +27,15 @@ class GatewayStatus(Enum):
 
 
 class GatewayMonitor(QThread):
-    """Background thread to monitor gateway status"""
+    """Background thread to monitor gateway status."""
+
     status_changed = Signal(GatewayStatus)
-    
+
     def __init__(self, gateway_manager):
         super().__init__()
-        self.gateway_manager = gateway_manager      # gateway manager being monitored
-        self._running = True                        # monitor loop switch
-    
+        self.gateway_manager = gateway_manager
+        self._running = True
+
     def run(self):
         last_status = None
         while self._running:
@@ -60,32 +44,47 @@ class GatewayMonitor(QThread):
                 self.status_changed.emit(current_status)
                 last_status = current_status
             time.sleep(1)
-    
+
     def stop(self):
         self._running = False
 
 
 class GatewayManager(QObject):
-    """Manages the OpenClaw gateway process"""
-    
+    """Thin process wrapper around the `openclaw gateway` CLI."""
+
     status_changed = Signal(GatewayStatus)
     log_message = Signal(str)
-    
+    process_output = Signal(str, str)
+
     def __init__(self, port: int = 18789):
         super().__init__()
-        self.port = port                                    # local gateway port
-        self._token = load_gateway_token()                  # cached gateway token
-        self._process: Optional[subprocess.Popen] = None    # spawned gateway process handle
-        self._status = GatewayStatus.STOPPED                # current gateway status snapshot
-        self._external_running_hits = 0                     # consecutive external port detections
-        self._monitor = GatewayMonitor(self)                # background status monitor
+        self.port = port
+        self._process: Optional[subprocess.Popen] = None
+        self._status = GatewayStatus.STOPPED
+        self._external_running_hits = 0
+        self._recent_stderr_output = deque(maxlen=80)
+        self._reported_process_exit = False
+        self._monitor = GatewayMonitor(self)
         self._monitor.status_changed.connect(self._on_status_changed)
         self._monitor.start()
-    
+
     def _on_status_changed(self, status: GatewayStatus):
         self._status = status
         self.status_changed.emit(status)
-    
+
+    def _set_status(self, status: GatewayStatus):
+        self._status = status
+        self.status_changed.emit(status)
+
+    def _reset_runtime_state(self):
+        """Clear transient runtime flags before a fresh start/after a clean stop."""
+        self._external_running_hits = 0
+        self._reported_process_exit = False
+
+    def _clear_process(self):
+        """Forget the tracked child process after it exits or is terminated."""
+        self._process = None
+
     def get_status(self) -> GatewayStatus:
         if self._process is None:
             if self._is_port_in_use(self.port):
@@ -99,63 +98,73 @@ class GatewayManager(QObject):
             self._external_running_hits = 0
             return GatewayStatus.STOPPED
 
-        if self._process.poll() is None and self._is_port_in_use(self.port):
+        process_exit_code = self._process.poll()
+        if process_exit_code is None and self._is_port_in_use(self.port):
             self._external_running_hits = 0
             return GatewayStatus.RUNNING
 
+        if process_exit_code is not None:
+            if not self._reported_process_exit and self._status not in (
+                GatewayStatus.STOPPING,
+                GatewayStatus.STOPPED,
+            ):
+                self._reported_process_exit = True
+                self._record_process_output(
+                    "stderr",
+                    f"Gateway process exited with code {process_exit_code}",
+                )
+            self._external_running_hits = 0
+            if self._status == GatewayStatus.STOPPING:
+                return GatewayStatus.STOPPED
+            if self._status in (
+                GatewayStatus.STARTING,
+                GatewayStatus.LOADING,
+                GatewayStatus.RUNNING,
+                GatewayStatus.ERROR,
+            ):
+                return GatewayStatus.ERROR
+
         self._external_running_hits = 0
         return GatewayStatus.STOPPED
-    
-    def _is_gateway_running(self) -> bool:
-        """Check if openclaw gateway is already running on the port"""
-        return self._is_port_in_use(self.port)
-    
+
     def _is_port_in_use(self, port: int) -> bool:
-        """Check if a port is in use"""
         try:
             for conn in psutil.net_connections():
-                if hasattr(conn.laddr, 'port') and conn.laddr.port == port:
-                    if conn.status == 'LISTEN':
+                if hasattr(conn.laddr, "port") and conn.laddr.port == port:
+                    if conn.status == "LISTEN":
                         return True
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             pass
-        
-        # Also try socket check
+
         try:
             import socket
+
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.settimeout(1)
-                result = s.connect_ex(('localhost', port))
+                result = s.connect_ex(("localhost", port))
                 return result == 0
         except Exception:
             pass
         return False
 
     def _openclaw_command_candidates(self) -> list[list[str]]:
-        """Return candidate command lines for launching openclaw."""
-        candidates: list[list[str]] = []
-
+        candidates = []
         for command_name in ("openclaw.cmd", "openclaw"):
             resolved = shutil.which(command_name)
             if resolved:
                 candidates.append([resolved])
 
-        windows_candidates = [
-            r"C:\nvm4w\nodejs\openclaw.cmd",
-            r"C:\nvm4w\nodejs\openclaw",
-        ]
-        for path in windows_candidates:
+        for path in (r"C:\nvm4w\nodejs\openclaw.cmd", r"C:\nvm4w\nodejs\openclaw"):
             if os.path.exists(path):
                 candidates.append([path])
 
-        unique_candidates: list[list[str]] = []
         seen = set()
+        unique_candidates = []
         for command in candidates:
             key = tuple(command)
-            if key in seen:
-                continue
-            seen.add(key)
-            unique_candidates.append(command)
+            if key not in seen:
+                seen.add(key)
+                unique_candidates.append(command)
         return unique_candidates
 
     def is_openclaw_installed(self) -> bool:
@@ -164,47 +173,139 @@ class GatewayManager(QObject):
     def get_openclaw_command_locations(self) -> list[str]:
         return [command[0] for command in self._openclaw_command_candidates()]
 
-    def _find_openclaw_cmd(self):
-        """Find the real openclaw command on Windows."""
+    def _find_openclaw_cmd(self) -> list[str]:
         candidates = self._openclaw_command_candidates()
         if candidates:
             return candidates[0]
-
         raise FileNotFoundError("Cannot find openclaw command")
-    
+
+    def clear_recent_output(self):
+        self._recent_stderr_output.clear()
+
+    def get_recent_stderr_text(self, limit: int = 80) -> str:
+        lines = list(self._recent_stderr_output)[-limit:]
+        cleaned_lines = [
+            line[len("[stderr] ") :] if line.startswith("[stderr] ") else line
+            for line in lines
+        ]
+        return "\n".join(cleaned_lines)
+
+    def _decode_process_output(self, message) -> str:
+        if isinstance(message, str):
+            return message
+
+        preferred_encoding = locale.getpreferredencoding(False) or "utf-8"
+        encodings = [
+            "utf-8",
+            preferred_encoding,
+            "gb18030",
+            "cp936",
+            "utf-16-le",
+            "latin-1",
+        ]
+
+        for encoding in encodings:
+            try:
+                return message.decode(encoding)
+            except UnicodeDecodeError:
+                continue
+
+        return message.decode("utf-8", errors="replace")
+
+    def _record_process_output(self, stream_name: str, message):
+        line = self._decode_process_output(message).rstrip()
+        if not line:
+            return
+        prefixed_line = f"[{stream_name}] {line}"
+        if stream_name == "stderr":
+            self._recent_stderr_output.append(prefixed_line)
+        if stream_name == "stderr":
+            logger.error("gateway %s", line)
+        else:
+            logger.info("gateway %s", line)
+        self.process_output.emit(stream_name, line)
+
+    def _read_process_pipe(self, stream_name: str, pipe):
+        try:
+            for raw_line in iter(pipe.readline, b""):
+                self._record_process_output(stream_name, raw_line)
+        except Exception as exc:
+            logger.exception("failed to read gateway %s: %s", stream_name, exc)
+        finally:
+            try:
+                pipe.close()
+            except Exception:
+                pass
+
+    def _popen_kwargs(self) -> dict:
+        """Use the same detached console-less launch settings everywhere."""
+        return {
+            "stdout": subprocess.PIPE,
+            "stderr": subprocess.PIPE,
+            "cwd": os.path.expanduser("~"),
+            "env": os.environ.copy(),
+            "creationflags": (
+                subprocess.CREATE_NO_WINDOW
+                if hasattr(subprocess, "CREATE_NO_WINDOW")
+                else 0
+            ),
+            "bufsize": 1,
+        }
+
+    def _start_output_readers(self):
+        if self._process is None:
+            return
+
+        for stream_name, pipe in (
+            ("stdout", self._process.stdout),
+            ("stderr", self._process.stderr),
+        ):
+            if pipe is None:
+                continue
+            threading.Thread(
+                target=self._read_process_pipe,
+                args=(stream_name, pipe),
+                daemon=True,
+            ).start()
+
+    def _start_command(self) -> list[str]:
+        """Build the exact CLI command used to launch the gateway."""
+        return self._find_openclaw_cmd() + ["gateway", "--port", str(self.port)]
+
+    def _mark_start_failure(self, message: str) -> bool:
+        self._set_status(GatewayStatus.ERROR)
+        self.log_message.emit(message)
+        self._clear_process()
+        self._external_running_hits = 0
+        return False
+
     def start(self) -> bool:
-        """Start the OpenClaw gateway"""
         if self._is_port_in_use(self.port):
             self._external_running_hits = 2
-            self.log_message.emit(f"Port {self.port} is already in use, gateway may already be running")
-            self._status = GatewayStatus.RUNNING
-            self.status_changed.emit(self._status)
+            self.log_message.emit(
+                f"Port {self.port} is already in use, gateway may already be running"
+            )
+            self._set_status(GatewayStatus.RUNNING)
             return True
 
         try:
-            self._status = GatewayStatus.STARTING
-            self.status_changed.emit(self._status)
+            self._set_status(GatewayStatus.STARTING)
+            self.clear_recent_output()
+            self._reset_runtime_state()
 
-            openclaw_cmd = self._find_openclaw_cmd()
-            cmd = openclaw_cmd + ["gateway", "--port", str(self.port)]
-
+            cmd = self._start_command()
             self.log_message.emit(f"Command: {' '.join(cmd)}")
 
-            self._process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                cwd=os.path.expanduser("~"),
-                env=os.environ.copy(),
-                creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0
-            )
+            self._process = subprocess.Popen(cmd, **self._popen_kwargs())
+            self._start_output_readers()
 
-            for _ in range(80):  # 最多等 8 秒
+            for _ in range(80):
                 if self._is_port_in_use(self.port):
                     self._external_running_hits = 0
-                    self._status = GatewayStatus.RUNNING
-                    self.status_changed.emit(self._status)
-                    self.log_message.emit(f"Gateway started successfully on port {self.port}")
+                    self._set_status(GatewayStatus.RUNNING)
+                    self.log_message.emit(
+                        f"Gateway started successfully on port {self.port}"
+                    )
                     return True
 
                 if self._process.poll() is not None:
@@ -212,23 +313,14 @@ class GatewayManager(QObject):
 
                 time.sleep(0.1)
 
-            self._status = GatewayStatus.ERROR
-            self.status_changed.emit(self._status)
-            self.log_message.emit("Failed to start gateway")
-            self._process = None
-            self._external_running_hits = 0
-            return False
+            return self._mark_start_failure("Failed to start gateway")
 
-        except Exception as e:
-            self.log_message.emit(f"Error starting gateway: {e}")
-            self._status = GatewayStatus.ERROR
-            self.status_changed.emit(self._status)
-            self._process = None
-            self._external_running_hits = 0
-            return False
-    
+        except Exception as exc:
+            self._record_process_output("stderr", str(exc))
+            self.log_message.emit(f"Error starting gateway: {exc}")
+            return self._mark_start_failure(f"Error starting gateway: {exc}")
+
     def _terminate_process_tree(self, pid: int, timeout: float = 3.0) -> None:
-        """Terminate a process tree by PID."""
         try:
             parent = psutil.Process(pid)
         except psutil.NoSuchProcess:
@@ -263,7 +355,6 @@ class GatewayManager(QObject):
                 pass
 
     def _get_pid_by_port(self, port: int) -> Optional[int]:
-        """Return the PID listening on the given port, if any."""
         try:
             for conn in psutil.net_connections(kind="inet"):
                 if conn.status == psutil.CONN_LISTEN:
@@ -274,19 +365,15 @@ class GatewayManager(QObject):
         return None
 
     def stop(self) -> bool:
-        """Stop the OpenClaw gateway."""
         try:
-            if self._process is None and not self._is_gateway_running():
+            if self._process is None and not self._is_port_in_use(self.port):
                 self.log_message.emit("Gateway is not running")
-                self._status = GatewayStatus.STOPPED
-                self.status_changed.emit(self._status)
+                self._set_status(GatewayStatus.STOPPED)
                 return True
 
-            self._status = GatewayStatus.STOPPING
-            self.status_changed.emit(self._status)
+            self._set_status(GatewayStatus.STOPPING)
             self.log_message.emit("Stopping gateway...")
 
-            # 1) 先停当前 app 记录到的进程树
             if self._process is not None:
                 try:
                     pid = self._process.pid
@@ -305,45 +392,43 @@ class GatewayManager(QObject):
                 except Exception:
                     pass
 
-            self._process = None
+            self._clear_process()
 
-            # 2) 如果端口还在，精准找到监听 18789 的 PID，再停一次
-            if self._is_gateway_running():
+            if self._is_port_in_use(self.port):
                 port_pid = self._get_pid_by_port(self.port)
                 if port_pid:
-                    self.log_message.emit(f"Port {self.port} is still in use by PID {port_pid}, forcing cleanup...")
+                    self.log_message.emit(
+                        f"Port {self.port} is still in use by PID {port_pid}, forcing cleanup..."
+                    )
                     self._terminate_process_tree(port_pid)
                     time.sleep(0.3)
 
-            # 3) 最终验收
-            if self._is_gateway_running():
-                self.log_message.emit("Stop failed: gateway is still listening on the port")
-                self._status = GatewayStatus.ERROR
-                self.status_changed.emit(self._status)
+            if self._is_port_in_use(self.port):
+                self.log_message.emit(
+                    "Stop failed: gateway is still listening on the port"
+                )
+                self._set_status(GatewayStatus.ERROR)
                 return False
 
-            self._process = None
-            self._status = GatewayStatus.STOPPED
-            self.status_changed.emit(self._status)
+            self._clear_process()
+            self._set_status(GatewayStatus.STOPPED)
             self.log_message.emit("Gateway stopped")
-            self._external_running_hits = 0
+            self._reset_runtime_state()
             return True
 
-        except Exception as e:
-            self.log_message.emit(f"Error stopping gateway: {e}")
-            self._status = GatewayStatus.ERROR
-            self.status_changed.emit(self._status)
+        except Exception as exc:
+            self._record_process_output("stderr", str(exc))
+            self.log_message.emit(f"Error stopping gateway: {exc}")
+            self._set_status(GatewayStatus.ERROR)
             self._external_running_hits = 0
             return False
-    
+
     def restart(self) -> bool:
-        """Restart the OpenClaw gateway"""
         self.log_message.emit("Restarting gateway...")
         self.stop()
         time.sleep(0.3)
         return self.start()
-    
+
     def cleanup(self):
-        """Clean up resources"""
         self._monitor.stop()
         self._monitor.wait()
