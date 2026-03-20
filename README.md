@@ -17,8 +17,8 @@
 - 🚀 Start, stop, and restart the local OpenClaw Gateway
 - 📊 View gateway status in real time
 - 🌐 Open the OpenClaw Dashboard directly inside the desktop app
-- 🧩 Freely download plugins and check for update information
-- 😡 View error messages
+- 🧩 Freely download plugins and check for update information (Source code only — release pending)
+- 😡 View error messages (Source code only — release pending)
 - 🖥️ Optionally keep OpenClaw running in the background after closing the window
 - 🦞 Interactive Welcome Page where the pet lobster can be moved to a target position
 
