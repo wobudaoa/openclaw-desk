@@ -4,7 +4,7 @@
 
 **简体中文 | [English](README.md)**
 
-🦞 一个面向 OpenClaw Gateway 的轻量级桌面控制器，内置仪表盘视图，并提供简洁直观的本地控制面板。
+🦞 一个面向 OpenClaw Gateway 的轻量级桌面控制器，内置仪表盘视图，并提供简洁直观的本地控制面板。方便你不用打开终端配置了！
 
 [![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 
@@ -17,6 +17,8 @@
 - 🚀 启动、停止和重启本地 OpenClaw Gateway
 - 📊 实时查看网关状态
 - 🌐 直接在桌面应用内打开 OpenClaw Dashboard
+- 🧩 支持自由下载插件与查看更新信息
+- 😡 支持查看报错信息
 - 🖥️ 支持关闭程序后，后台持续运行OpenClaw（可选）
 - 🦞 交互式 Welcome Page 欢迎页，可将宠物小龙虾移动到指定位置
 
