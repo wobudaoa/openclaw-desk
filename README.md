@@ -4,7 +4,7 @@
 
 **[简体中文](README.zh-CN.md) | English**
 
-🦞 A lightweight desktop controller for the OpenClaw Gateway, with an embedded dashboard view and a simple local control panel.
+🦞 A lightweight desktop controller for the OpenClaw Gateway, with an embedded dashboard view and a simple local control panel.No need to open the terminal for configuration anymore!
 
 [![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 
@@ -17,6 +17,8 @@
 - 🚀 Start, stop, and restart the local OpenClaw Gateway
 - 📊 View gateway status in real time
 - 🌐 Open the OpenClaw Dashboard directly inside the desktop app
+- 🧩 Freely download plugins and check for update information
+- 😡 View error messages
 - 🖥️ Optionally keep OpenClaw running in the background after closing the window
 - 🦞 Interactive Welcome Page where the pet lobster can be moved to a target position
 
