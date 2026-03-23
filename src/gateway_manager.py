@@ -85,6 +85,10 @@ class GatewayManager(QObject):
         """Forget the tracked child process after it exits or is terminated."""
         self._process = None
 
+    def set_port(self, port: int) -> None:
+        """Update the configured gateway port used for future launches and checks."""
+        self.port = int(port)
+
     def get_status(self) -> GatewayStatus:
         if self._process is None:
             if self._is_port_in_use(self.port):
@@ -149,14 +153,32 @@ class GatewayManager(QObject):
 
     def _openclaw_command_candidates(self) -> list[list[str]]:
         candidates = []
+
         for command_name in ("openclaw.cmd", "openclaw"):
             resolved = shutil.which(command_name)
             if resolved:
                 candidates.append([resolved])
 
-        for path in (r"C:\nvm4w\nodejs\openclaw.cmd", r"C:\nvm4w\nodejs\openclaw"):
-            if os.path.exists(path):
-                candidates.append([path])
+        extra_dirs = []
+        for env_name in ("NVM_SYMLINK", "APPDATA"):
+            value = os.getenv(env_name)
+            if not value:
+                continue
+            if env_name == "APPDATA":
+                extra_dirs.append(os.path.join(value, "npm"))
+            else:
+                extra_dirs.append(value)
+
+        seen_dirs = set()
+        for directory in extra_dirs:
+            normalized = os.path.normcase(os.path.normpath(directory))
+            if normalized in seen_dirs or not os.path.isdir(directory):
+                continue
+            seen_dirs.add(normalized)
+            for filename in ("openclaw.cmd", "openclaw"):
+                path = os.path.join(directory, filename)
+                if os.path.exists(path):
+                    candidates.append([path])
 
         seen = set()
         unique_candidates = []

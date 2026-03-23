@@ -5,7 +5,7 @@
 ; =========================================================
 
 #define MyAppName "ClawDesk"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.1"
 #define MyAppPublisher "wobudaoa"
 #define MyAppURL "https://github.com/wobudaoa/openclaw-desk"
 #define MyAppExeName "ClawDesk.exe"

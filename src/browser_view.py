@@ -28,12 +28,14 @@ logger = logging.getLogger("openclaw.desktop.browser")
 # Try to import WebEngine - prefer PySide6, fallback to PyQt6
 try:
     from PySide6.QtWebEngineWidgets import QWebEngineView
+    from PySide6.QtWebEngineCore import QWebEnginePage
     from PySide6.QtCore import QUrl
     WEBENGINE_AVAILABLE = True
     WEBENGINE_BACKEND = "pyside6"
 except ImportError:
     WEBENGINE_AVAILABLE = False
     WEBENGINE_BACKEND = None
+    QWebEnginePage = None
     from PySide6.QtCore import QUrl
 
 
@@ -88,6 +90,28 @@ class MaskedUrlLineEdit(QLineEdit):
         self.style().unpolish(self)
         self.style().polish(self)
         self.blockSignals(False)
+
+
+class GuardedWebEnginePage(QWebEnginePage):
+    """Restrict browser navigation unless expose mode explicitly allows external pages."""
+
+    def __init__(self, browser_view: "BrowserView"):
+        super().__init__(browser_view)
+        self.browser_view = browser_view
+
+    def acceptNavigationRequest(self, url, navigation_type, is_main_frame):
+        if self.browser_view.should_allow_navigation(url, navigation_type, is_main_frame):
+            return super().acceptNavigationRequest(url, navigation_type, is_main_frame)
+        logger.info("blocked browser navigation to %s", url.toString())
+        return False
+
+    def createWindow(self, window_type):
+        if self.browser_view._expose_mode:
+            logger.info("reusing embedded browser for popup/new-window navigation")
+            return self
+        logger.info("blocked popup/new-window navigation because expose mode is disabled")
+        return None
+
 
 
 class LoggedWebEngineView(QWebEngineView):
@@ -280,6 +304,8 @@ class BrowserView(QWidget):
             self.url += f"?token={token}#token={token}"
 
         self._popup_guard = PopupGeometryGuard(self)
+        self._expose_mode = False                    # whether clicked external links may open inside the embedded browser
+        self._show_dashboard_loading = False         # only show the dashboard loading page for explicit dashboard opens
         self._setup_ui()
 
     def _setup_ui(self):
@@ -373,6 +399,7 @@ class BrowserView(QWidget):
         self.content_stack.addWidget(self.loading_view)
 
         self.web_view = LoggedWebEngineView()                       # embedded Qt WebEngine view
+        self.web_view.setPage(GuardedWebEnginePage(self))
         self.web_view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.content_stack.addWidget(self.web_view)
         self.content_stack.setCurrentWidget(self.loading_view)
@@ -388,6 +415,34 @@ class BrowserView(QWidget):
 
         # Pre-warm WebEngine so the first real dashboard navigation is less jarring.
         QTimer.singleShot(0, self._prewarm_web_view)
+
+    def set_expose_mode(self, enabled: bool):
+        """Allow clicked external links to open inside the embedded browser when enabled."""
+        self._expose_mode = bool(enabled)
+
+    def set_port(self, port: int):
+        """Rebuild local dashboard URLs when the configured gateway port changes."""
+        self.port = int(port)
+        self.base_url = f"http://localhost:{self.port}"
+        token = load_gateway_token().strip()
+        self.url = self.base_url
+        if token:
+            self.url += f"?token={token}#token={token}"
+        if hasattr(self, 'url_input'):
+            self.url_input.set_real_text(self.url)
+
+    def should_allow_navigation(self, url: QUrl, navigation_type, is_main_frame: bool) -> bool:
+        """Keep the embedded browser local-only unless expose mode permits external http/https pages."""
+        if not is_main_frame:
+            return True
+        if not url.isValid():
+            return False
+        host = (url.host() or '').lower()
+        if host in {'', 'localhost', '127.0.0.1'}:
+            return True
+        scheme = (url.scheme() or '').lower()
+        return self._expose_mode and scheme in {'http', 'https'}
+
 
     def _create_nav_button(self, icon, tooltip: str, handler):
         button = QToolButton()
@@ -445,6 +500,7 @@ class BrowserView(QWidget):
         logger.info("open_home called with url=%s", self.url)
         if WEBENGINE_AVAILABLE and hasattr(self, "web_view"):
             self._prewarm_in_progress = False
+            self._show_dashboard_loading = True
             self._show_loading_state("Connecting to local gateway...")
             self.web_view.setUrl(QUrl(self.url))
 
@@ -555,6 +611,8 @@ class BrowserView(QWidget):
     def _go_home(self):
         logger.info("browser home requested with url=%s", self.url)
         if WEBENGINE_AVAILABLE and hasattr(self, "web_view"):
+            self._show_dashboard_loading = True
+            self._show_loading_state("Connecting to local gateway...")
             self.web_view.setUrl(QUrl(self.url))
 
     def _on_load_started(self):
@@ -562,7 +620,8 @@ class BrowserView(QWidget):
         if self._prewarm_in_progress:
             logger.info("ignoring load started for web view prewarm")
             return
-        self._show_loading_state("Loading dashboard...")
+        if self._show_dashboard_loading:
+            self._show_loading_state("Loading dashboard...")
         self.page_load_started.emit()
 
     def _on_load_finished(self, ok):
@@ -573,8 +632,9 @@ class BrowserView(QWidget):
             return
         if ok and hasattr(self, "content_stack"):
             self.content_stack.setCurrentWidget(self.web_view)
-        elif not ok:
+        elif not ok and self._show_dashboard_loading:
             self._show_loading_state("Dashboard failed to load. Try Refresh.")
+        self._show_dashboard_loading = False
         self.page_load_finished.emit(ok)
 
     def _on_load_progress(self, progress):

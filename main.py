@@ -48,11 +48,16 @@ configure_logging()
 logger = logging.getLogger("openclaw.desktop.app")
 
 
+def resource_base_dir():
+    """Return the bundled resource directory used for icons and packaged assets."""
+    return getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+
+
 def create_default_icon():
     """Create a simple default icon if no icon file exists"""
     # Return None to use system default icon
     # You can add a real icon file later in assets/icon.png
-    path = os.path.join(os.path.dirname(__file__), "assets", "emoji.png")
+    path = os.path.join(resource_base_dir(), "assets", "emoji.png")
     if os.path.exists(path):
         return QIcon(path)
     return None
@@ -73,7 +78,7 @@ class OpenClawApp:
         self.app.setOrganizationName("OpenClaw")
 
         # Set global font
-        font = QFont("Segoe UI", 10)
+        font = QFont("Microsoft YaHei UI", 10)
         self.app.setFont(font)
 
         # Create main window

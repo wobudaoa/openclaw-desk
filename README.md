@@ -4,7 +4,7 @@
 
 **[简体中文](README.zh-CN.md) | English**
 
-🦞 A lightweight desktop controller for the OpenClaw Gateway, with an embedded dashboard view and a simple local control panel.No need to open the terminal for configuration anymore!
+🦞 A lightweight desktop controller for the OpenClaw Gateway, with an embedded dashboard view, local controls, and a cleaner daily workflow for Windows users.
 
 [![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 
@@ -14,13 +14,19 @@
 
 ## ✨ Features
 
-- 🚀 Start, stop, and restart the local OpenClaw Gateway
-- 📊 View gateway status in real time
-- 🌐 Open the OpenClaw Dashboard directly inside the desktop app
-- 🧩 Freely download plugins and check for update information (Source code only — release pending)
-- 😡 View error messages (Source code only — release pending)
-- 🖥️ Optionally keep OpenClaw running in the background after closing the window
-- 🦞 Interactive Welcome Page where the pet lobster can be moved to a target position
+- 🚀 Support starting, stopping, and restarting the local OpenClaw Gateway
+- 📊 Support real-time gateway status in the desktop UI
+- 🌐 Support opening the OpenClaw Dashboard directly inside the app
+- 😡 Support an error screen for installation failures, gateway errors, and dashboard fallback states
+- 🧠 Support getting Skills from the desktop app without switching back to a terminal
+- 🧩 Support plugin downloads and the full plugin installation flow from the desktop app
+- 📋 Dedicated plugin list page with refresh, cached loading, and enable / disable actions
+- 🔓 Support external link access through Expose Mode inside the embedded browser
+- 🌍 Support English / Simplified Chinese language switching
+- 💾 Support persistent preferences for language, expose mode, gateway port, window size, and more
+- ⚙️ Support settings for local directory access, port changes, expose mode, language, and app information
+- 🖥️ Support optionally keeping the gateway running after closing the app
+- 🦞 Interactive welcome page with the movable lobster mascot
 
 ------
 
@@ -38,28 +44,24 @@ Current desktop UI preview:
 
 ### 💥 Direct Installation
 
-If you only want to use **ClawDesk** quickly, without configuring a Python environment or building manually, you can download the official Windows installer directly.
+If you only want to use **ClawDesk** quickly, without configuring Python or building from source, download the Windows installer directly.
 
-1. Download the installer from the latest release:
-   **ClawDesk-Setup-1.0.0.exe**
-   https://github.com/wobudaoa/openclaw-desk/releases/download/v1.0.0/ClawDesk-Setup-1.0.0.exe
-
+1. Download the latest installer:
+   **ClawDesk-Setup-1.0.1.exe**
+   https://github.com/wobudaoa/openclaw-desk/releases/download/v1.0.1/ClawDesk-Setup-1.0.1.exe
 2. Run the installer and follow the setup steps.
 
 After installation, you can launch **ClawDesk** from:
 
-- The Start Menu: **ClawDesk**
-- The desktop shortcut, if you chose to create one during setup
+- Start Menu: **ClawDesk**
+- Desktop shortcut, if you chose to create one
 - `ClawDesk.exe` in the installation directory
-
-Once started, you can manage the **OpenClaw Gateway** from the desktop UI and open the dashboard directly inside the app.
 
 ------
 
 ### Run from Source
 
 1. Create and activate a Python virtual environment. Conda is recommended, with Python **3.10 - 3.12**.
-
 2. Install dependencies from the project root:
 
 ```bash
@@ -72,63 +74,34 @@ pip install -r requirements.txt
 python main.py
 ```
 
-4. If you use Conda, you can also edit `openclaw-desk.bat`, replace the environment name `openclaw` with your own, then launch it by double-clicking the script. The batch file looks like this:
-
-```batch
-@echo off
-chcp 65001 >nul
-title OpenClaw Launcher
-echo ========================================
-echo      OpenClaw Auto Launcher
-echo ========================================
-echo.
-
-:: Activate the Conda environment. It is called openclaw here.
-call conda activate openclaw
-
-:: Check whether activation succeeded
-if %errorlevel% neq 0 (
-    echo [ERROR] Failed to activate environment. Please check:
-    echo     1. Whether Conda is installed correctly
-    echo     2. Whether the openclaw environment exists
-    echo     3. Run: conda info --envs
-    pause
-    exit /b 1
-)
-
-echo [OK] Conda environment activated: openclaw
-echo.
-
-:: Run the Python app
-echo [START] Launching OpenClaw Desk...
-python main.py
-
-:: Pause after the app exits
-echo.
-echo [EXIT] Program closed.
-pause
-```
+4. If you use Conda, you can edit `openclaw-desk.bat`, replace the environment name `openclaw` with your own, then launch it by double-clicking the script.
 
 ------
 
-## 🫡 Usage Instructions
+## 🫡 Usage
 
-- If installed via the installation package, simply press Win+Q and search for ClawDesk!
-- When closing, you will be prompted with the following three options:
-    - Yes = Stop gateway and exit
-    - No = Keep gateway running and exit
-    - Cancel = Stay in application
+- If installed through the packaged installer, press `Win+Q` and search for `ClawDesk`.
+- The header provides direct entry points for the dashboard, plugin list, error info, and settings.
+- `Get Plugins` lets you download plugins directly from the desktop app.
+- `Get Skills` lets you get skills directly from the desktop app.
+- The plugin list page loads current plugin states, supports refresh, and allows enable / disable actions.
+- `Settings` lets you open the local config directory, change the gateway port, switch Expose Mode, and change the app language.
+- The app remembers language, expose mode, port, window size, and cached plugin list data across restarts.
+- When closing, you can choose:
+  - `Yes` = stop gateway and exit
+  - `No` = keep gateway running and exit
+  - `Cancel` = stay in the app
 
 ------
 
 ## 🧩 Requirements
 
 - Python **>=3.10, <=3.12**
-- Running on a Windows desktop environment is recommended
+- Windows desktop environment recommended
 - **OpenClaw** must already be installed locally and available in the system path
-- **Qt WebEngine** is required if you want to use the embedded dashboard view
+- **Qt WebEngine** is required for the embedded dashboard view
 
-If OpenClaw is not installed yet, the app will remain in a locked error state and prompt you to install it first.
+If OpenClaw is not installed yet, the app stays in an error state and prompts you to install it first.
 
 ------
 
@@ -136,6 +109,15 @@ If OpenClaw is not installed yet, the app will remain in a locked error state an
 
 - GitHub: https://github.com/openclaw/openclaw
 - Docs: https://docs.openclaw.ai/
+
+------
+
+## 📝 Notes
+
+- ClawDesk manages a local **OpenClaw Gateway** process on port **18789** by default, and you can change it at any time in Settings.
+- The embedded browser stays local-only by default. When **Expose Mode** is enabled, clicked external `http/https` links can open inside the embedded browser.
+- Settings are written to local `config.json`, and plugin list data is cached for faster startup.
+- If WebEngine is unavailable, the app can still show fallback UI and expose the dashboard URL.
 
 ------
 
@@ -153,36 +135,22 @@ If OpenClaw is not installed yet, the app will remain in a locked error state an
 |   |-- gateway_manager.py
 |   |-- main_window.py
 |   |-- tray_icon.py
+|   `-- translations.py
 |-- utils/
-|   |-- emoji_icon.py
+|   `-- emoji_icon.py
 |-- README.md
 `-- README.zh-CN.md
 ```
-
-**File Description**
-
-- `assets/emoji.png`
-  Icon asset used by the desktop application.
-- `utils/emoji_icon.py`
-  Utility script for generating a custom icon from an emoji.
-
-------
-
-## 📝 Notes
-
-- This desktop app manages a local **OpenClaw Gateway** process running on port **18789** by default.
-- The embedded browser depends on **Qt WebEngine** support in the current environment.
-- If WebEngine is unavailable, the app can still expose the dashboard URL through the fallback UI.
 
 ------
 
 ## 📜 License
 
-MIT License © 2026 wobudaoa
+MIT License Copyright (c) 2026 wobudaoa
 
 OpenClaw Desk is released under the MIT License.
 
-This project is an independent desktop wrapper for OpenClaw. It is **not affiliated with or endorsed by the OpenClaw project**.
+This project is an independent desktop wrapper for OpenClaw. It is not affiliated with or endorsed by the OpenClaw project.
 
 See the `LICENSE` file for the full license text.
 
