@@ -370,25 +370,25 @@ class OpenClawCommandThread(QThread):
 
 
 def parse_plugin_list_output(output: str) -> list[dict[str, str]]:
-    """Parse either ASCII or Unicode tables returned by `openclaw plugins list`."""
+    """Parse both legacy and newer `openclaw plugins list` table layouts."""
     cleaned_output = ANSI_ESCAPE_RE.sub('', output)
     lines = [line.rstrip() for line in cleaned_output.splitlines()]
 
-    top_markers = ('\u250c', '+')
-    bottom_markers = ('\u2514', '+')
-    row_markers = ('\u2502', '|')
+    top_markers = ('┌', '+')
+    bottom_markers = ('└', '+')
+    row_markers = ('│', '|')
 
     top_index = next(
         (
             i for i, line in enumerate(lines)
-            if line.strip().startswith(top_markers) and line.strip().endswith(('\u2510', '+'))
+            if line.strip().startswith(top_markers) and line.strip().endswith(('┐', '+'))
         ),
         -1,
     )
     bottom_index = next(
         (
             i for i in range(len(lines) - 1, -1, -1)
-            if lines[i].strip().startswith(bottom_markers) and lines[i].strip().endswith(('\u2518', '+'))
+            if lines[i].strip().startswith(bottom_markers) and lines[i].strip().endswith(('┘', '+'))
         ),
         -1,
     )
@@ -399,42 +399,75 @@ def parse_plugin_list_output(output: str) -> list[dict[str, str]]:
     header_index = next(
         (
             i for i, line in enumerate(table_lines)
-            if line.strip().startswith(('\u2502 Name', '| Name'))
+            if line.strip().startswith(('│ Name', '| Name'))
         ),
         -1,
     )
     if header_index < 0:
         return []
 
+    header_line = table_lines[header_index].strip()
+    border_char = header_line[0]
+    headers = [part.strip().lower() for part in header_line.strip(border_char).split(border_char)]
+    index_map = {name: idx for idx, name in enumerate(headers)}
+    required = ('name', 'id', 'status', 'source', 'version')
+    if any(name not in index_map for name in required):
+        return []
+
     plugins: list[dict[str, str]] = []
     current: dict[str, str] | None = None
-    keys = ('name', 'id', 'status', 'source', 'version')
+
+    def cell(cells: list[str], column: str) -> str:
+        idx = index_map.get(column, -1)
+        return cells[idx] if 0 <= idx < len(cells) else ''
 
     for line in table_lines[header_index + 2:]:
         stripped = line.strip()
-        if stripped.startswith(('\u2514', '+')):
+        if stripped.startswith(('└', '+')):
             break
         if not stripped.startswith(row_markers):
             continue
 
-        border_char = stripped[0]
-        cells = [part.strip() for part in stripped.strip(border_char).split(border_char)]
-        if len(cells) < 5:
-            continue
-        cells = (cells + [''] * 5)[:5]
+        row_border = stripped[0]
+        cells = [part.strip() for part in stripped.strip(row_border).split(row_border)]
+        if len(cells) < len(headers):
+            cells += [''] * (len(headers) - len(cells))
 
-        if cells[2]:
+        row_name = cell(cells, 'name')
+        row_id = cell(cells, 'id')
+        row_status = cell(cells, 'status')
+        row_source = cell(cells, 'source')
+        row_version = cell(cells, 'version')
+        row_format = cell(cells, 'format')
+
+        is_new_record = bool(row_status)
+        if is_new_record:
             if current is not None:
                 plugins.append(current)
-            current = dict(zip(keys, cells))
+            current = {
+                'name': row_name,
+                'id': row_id,
+                'status': row_status,
+                'source': row_source,
+                'version': row_version,
+            }
+            if row_format:
+                current['format'] = row_format
             continue
 
         if current is None:
             continue
 
-        for key, value in zip(keys, cells):
+        for key, value in (
+            ('name', row_name),
+            ('id', row_id),
+            ('status', row_status),
+            ('source', row_source),
+            ('version', row_version),
+            ('format', row_format),
+        ):
             if value:
-                current[key] = f"{current[key]} {value}".strip()
+                current[key] = f"{current.get(key, '')} {value}".strip()
 
     if current is not None:
         plugins.append(current)
